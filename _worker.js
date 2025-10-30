@@ -270,7 +270,7 @@ function handleCORS() {
     });
 }
 
-// 生成画廊 HTML
+// 生成画廊 HTML（精美升级版）
 function generateGalleryHTML(data) {
     const images = data.images || [];
     const title = escapeHtml(data.title || '图集');
@@ -284,99 +284,203 @@ function generateGalleryHTML(data) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title} - 图集画廊</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+            --accent: #007bff;
+            --radius: 16px;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #e8e8e8;
+            --text-secondary: #aaa;
+            --border-color: #404040;
+            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
         }
+        
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
+        
+        /* 顶部栏 */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        /* 头部 */
         .header {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
         }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+        
         .header h1 {
-            font-size: 28px;
-            margin-bottom: 15px;
-            color: #1a1a1a;
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-weight: 700;
         }
+        
         .meta {
             display: flex;
-            gap: 20px;
+            gap: 24px;
             flex-wrap: wrap;
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
         }
+        
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
         }
+        
+        /* 瀑布流画廊 */
         .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
+            column-count: 4;
+            column-gap: 20px;
             margin-bottom: 40px;
         }
+        
         .image-card {
-            background: white;
-            border-radius: 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            break-inside: avoid;
+            margin-bottom: 20px;
+            position: relative;
         }
+        
         .image-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: var(--shadow-hover);
         }
+        
         .image-card img {
             width: 100%;
-            height: 280px;
-            object-fit: cover;
             display: block;
+            transition: transform 0.3s;
         }
-        .image-footer {
-            padding: 12px;
-            text-align: center;
-            font-size: 13px;
-            color: #666;
-            background: #fafafa;
+        
+        .image-card:hover img {
+            transform: scale(1.05);
         }
-        .download-btn {
-            display: none;
+        
+        .image-overlay {
             position: absolute;
-            bottom: 12px;
-            right: 12px;
-            background: rgba(0,0,0,0.7);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            padding: 20px 15px 15px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
             color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
+        }
+        
+        .image-card:hover .image-overlay {
+            transform: translateY(0);
+        }
+        
+        .image-number {
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .download-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            color: #333;
+            padding: 8px 14px;
+            border-radius: 8px;
             text-decoration: none;
             font-size: 13px;
-            transition: background 0.2s;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
+        
         .image-card:hover .download-btn {
-            display: block;
+            opacity: 1;
         }
+        
         .download-btn:hover {
-            background: rgba(0,0,0,0.9);
+            background: white;
+            transform: scale(1.05);
         }
-        .footer {
-            text-align: center;
-            padding: 30px;
-            color: #999;
-            font-size: 13px;
-        }
-        /* 灯箱 */
+        
+        /* 灯箱（升级版） */
         .lightbox {
             display: none;
             position: fixed;
@@ -384,44 +488,195 @@ function generateGalleryHTML(data) {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.95);
+            background: rgba(0,0,0,0.97);
             z-index: 9999;
             justify-content: center;
             align-items: center;
+            animation: fadeIn 0.3s;
         }
+        
         .lightbox.active {
             display: flex;
         }
-        .lightbox img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
+        
+        .lightbox-content {
+            position: relative;
+            max-width: 95%;
+            max-height: 95%;
         }
-        .lightbox-close {
+        
+        .lightbox img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .lightbox-controls {
             position: absolute;
             top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            cursor: pointer;
-            user-select: none;
+            right: 20px;
+            display: flex;
+            gap: 12px;
         }
+        
+        .lightbox-btn {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+        
+        .lightbox-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            transition: all 0.2s;
+        }
+        
+        .lightbox-nav:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .lightbox-prev { left: 30px; }
+        .lightbox-next { right: 30px; }
+        
+        .lightbox-counter {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+        
+        .footer a:hover {
+            opacity: 0.8;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .gallery { column-count: 3; }
+        }
+        
         @media (max-width: 768px) {
-            .gallery {
-                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-                gap: 12px;
+            .gallery { 
+                column-count: 2; 
+                column-gap: 12px;
             }
-            .image-card img {
-                height: 180px;
+            .header {
+                padding: 24px;
             }
             .header h1 {
-                font-size: 22px;
+                font-size: 24px;
+            }
+            .meta {
+                gap: 12px;
+            }
+            .lightbox-nav {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+            .lightbox-prev { left: 15px; }
+            .lightbox-next { right: 15px; }
+        }
+        
+        @media (max-width: 480px) {
+            .gallery { column-count: 1; }
+            .top-bar {
+                flex-direction: column;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 顶部控制栏 -->
+        <div class="top-bar">
+            <button class="btn" onclick="toggleTheme()">
+                <span id="theme-icon">🌙</span> 
+                <span id="theme-text">深色</span>
+            </button>
+            <button class="btn" onclick="shareGallery()">
+                🔗 分享
+            </button>
+        </div>
+
+        <!-- 头部信息 -->
         <div class="header">
             <h1>📸 ${title}</h1>
             <div class="meta">
@@ -432,45 +687,159 @@ function generateGalleryHTML(data) {
             </div>
         </div>
 
-        <div class="gallery">
+        <!-- 瀑布流画廊 -->
+        <div class="gallery" id="gallery">
             ${images.map((img, index) => `
                 <div class="image-card" onclick="openLightbox(${index})">
                     <img src="${escapeHtml(img)}" alt="图片 ${index + 1}" loading="lazy">
-                    <div class="image-footer">图片 ${index + 1}/${images.length}</div>
-                    <a href="${escapeHtml(img)}" download="image-${index + 1}.jpg" class="download-btn" onclick="event.stopPropagation()">💾 下载</a>
+                    <div class="image-overlay">
+                        <div class="image-number">图片 ${index + 1}/${images.length}</div>
+                    </div>
+                    <a href="${escapeHtml(img)}" download="image-${index + 1}" class="download-btn" onclick="event.stopPropagation()">💾 下载</a>
                 </div>
             `).join('')}
         </div>
 
+        <!-- 页脚 -->
         <div class="footer">
-            <p>🌍 全球可访问 · ⚡ 由 <a href="https://1yo.cc" target="_blank" style="color: #666; text-decoration: none;">Nebuluxe</a> 强力驱动</p>
+            <p>🌍 全球可访问 · ⚡ 由 <a href="https://1yo.cc" target="_blank">Nebuluxe</a> 强力驱动</p>
+            <p style="margin-top: 12px; font-size: 12px; opacity: 0.7;">
+                支持 GIF 动图 · 深色模式 · 快捷键导航
+            </p>
         </div>
     </div>
 
     <!-- 灯箱 -->
-    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
-        <span class="lightbox-close">&times;</span>
-        <img id="lightbox-img" src="" alt="">
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-controls">
+            <div class="lightbox-btn" onclick="downloadCurrent()" title="下载当前图片">💾</div>
+            <div class="lightbox-btn" onclick="closeLightbox()" title="关闭">✕</div>
+        </div>
+        <div class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">‹</div>
+        <div class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">›</div>
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="">
+        </div>
+        <div class="lightbox-counter" id="lightbox-counter">1 / ${images.length}</div>
     </div>
 
     <script>
         const images = ${JSON.stringify(images)};
+        let currentIndex = 0;
         
-        function openLightbox(index) {
-            const lightbox = document.getElementById('lightbox');
-            const img = document.getElementById('lightbox-img');
-            img.src = images[index];
-            lightbox.classList.add('active');
+        // 深色模式切换
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            
+            // 更新按钮文字
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            document.getElementById('theme-text').textContent = newTheme === 'dark' ? '浅色' : '深色';
+            
+            // 保存偏好
+            localStorage.setItem('theme', newTheme);
         }
-
+        
+        // 加载保存的主题偏好
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('theme-icon').textContent = '☀️';
+                document.getElementById('theme-text').textContent = '浅色';
+            }
+        })();
+        
+        // 分享功能
+        async function shareGallery() {
+            const url = window.location.href;
+            const text = '${title} - ${images.length}张图片';
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: text, url });
+                } catch (e) {
+                    copyToClipboard(url);
+                }
+            } else {
+                copyToClipboard(url);
+            }
+        }
+        
+        function copyToClipboard(text) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert('链接已复制到剪贴板！');
+        }
+        
+        // 灯箱功能（增强版）
+        function openLightbox(index) {
+            currentIndex = index;
+            updateLightbox();
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
         function closeLightbox() {
             document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
         }
-
-        // ESC 键关闭
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeLightbox();
+        
+        function navigateLightbox(direction) {
+            currentIndex = (currentIndex + direction + images.length) % images.length;
+            updateLightbox();
+        }
+        
+        function updateLightbox() {
+            document.getElementById('lightbox-img').src = images[currentIndex];
+            document.getElementById('lightbox-counter').textContent = 
+                \`\${currentIndex + 1} / \${images.length}\`;
+        }
+        
+        function downloadCurrent() {
+            const link = document.createElement('a');
+            link.href = images[currentIndex];
+            link.download = \`image-\${currentIndex + 1}\`;
+            link.click();
+        }
+        
+        // 点击背景关闭灯箱
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLightbox();
+            }
         });
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            const lightbox = document.getElementById('lightbox');
+            if (!lightbox.classList.contains('active')) return;
+            
+            switch(e.key) {
+                case 'Escape':
+                    closeLightbox();
+                    break;
+                case 'ArrowLeft':
+                    navigateLightbox(-1);
+                    break;
+                case 'ArrowRight':
+                    navigateLightbox(1);
+                    break;
+            }
+        });
+        
+        // 批量下载功能（隐藏，保留接口）
+        async function downloadAllImages() {
+            // 预留批量下载功能
+            // 未来可以通过ZIP打包或逐个下载
+            console.log('Batch download feature reserved for future use');
+        }
     </script>
 </body>
 </html>`;
