@@ -205,6 +205,49 @@ async function handleViewGallery(path, env) {
     });
 }
 
+// ========== 画廊广场 ==========
+async function handleGalleryPlaza(env, searchParams) {
+    try {
+        // 从 KV 获取所有画廊（使用 list）
+        const limit = parseInt(searchParams.get('limit')) || 50;
+        const { keys } = await env.KV.list({ 
+            prefix: 'gallery:', 
+            limit: Math.min(limit, 100) // 最多100个
+        });
+
+        // 并行读取所有画廊数据
+        const galleryPromises = keys.map(key => 
+            env.KV.get(key.name, 'json')
+        );
+        const galleries = await Promise.all(galleryPromises);
+
+        // 过滤掉空数据，按创建时间倒序排序
+        const validGalleries = galleries
+            .filter(g => g && g.id)
+            .sort((a, b) => (b.created || 0) - (a.created || 0));
+
+        // 生成广场页面
+        const html = generatePlazaHTML(validGalleries);
+
+        return new Response(html, {
+            headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'public, max-age=300' // 缓存5分钟
+            }
+        });
+
+    } catch (error) {
+        console.error('Plaza error:', error);
+        return new Response(
+            generatePlazaErrorHTML(error.message),
+            { 
+                status: 500,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            }
+        );
+    }
+}
+
 // ========== 配额查询 ==========
 async function handleQuotaCheck(request, env) {
     const auth = request.headers.get('Authorization');
@@ -902,5 +945,517 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// 生成画廊广场页面
+function generatePlazaHTML(galleries) {
+    const totalCount = galleries.length;
+    
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画廊广场 - Gallery Plaza</title>
+    <style>
+        :root {
+            --bg-primary: #fafafa;
+            --bg-secondary: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+            --accent: #667eea;
+            --radius: 16px;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #aaa;
+            --text-tertiary: #666;
+            --border-color: #2d2d2d;
+            --shadow: 0 2px 12px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.5);
+            --accent: #8b9efc;
+        }
+        
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        /* 顶部导航栏 */
+        .navbar {
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+        }
+        
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .navbar-title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .navbar-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-left: 12px;
+        }
+        
+        .navbar-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        
+        /* 容器 */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        /* 统计信息 */
+        .stats {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .stats-number {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        
+        .stats-label {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        
+        /* 瀑布流画廊 */
+        .plaza-gallery {
+            column-count: 4;
+            column-gap: 20px;
+        }
+        
+        .gallery-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            break-inside: avoid;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .gallery-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        /* 封面拼图 */
+        .card-cover {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            background: var(--bg-primary);
+        }
+        
+        .cover-grid {
+            display: grid;
+            gap: 2px;
+        }
+        
+        .cover-grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .cover-grid-3 {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 2fr 1fr;
+        }
+        
+        .cover-grid-3 img:first-child {
+            grid-column: 1 / 3;
+        }
+        
+        .cover-grid-4 {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+        
+        .cover-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        
+        .cover-grid-3 .cover-img:first-child {
+            height: 240px;
+        }
+        
+        .cover-grid-3 .cover-img:not(:first-child) {
+            height: 120px;
+        }
+        
+        .gallery-card:hover .cover-img {
+            transform: scale(1.05);
+        }
+        
+        /* GIF 标识 */
+        .gif-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        /* 卡片信息 */
+        .card-info {
+            padding: 16px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .card-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+        
+        .card-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .card-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .plaza-gallery { column-count: 3; }
+        }
+        
+        @media (max-width: 768px) {
+            .plaza-gallery { 
+                column-count: 2; 
+                column-gap: 12px;
+            }
+            .navbar-title {
+                font-size: 20px;
+            }
+            .navbar-subtitle {
+                display: none;
+            }
+            .stats-number {
+                font-size: 36px;
+            }
+            .cover-img {
+                height: 150px;
+            }
+            .cover-grid-3 .cover-img:first-child {
+                height: 200px;
+            }
+            .cover-grid-3 .cover-img:not(:first-child) {
+                height: 100px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div style="display: flex; align-items: center;">
+                <div class="navbar-title">🎨 画廊广场</div>
+                <span class="navbar-subtitle">探索 ${totalCount} 个精彩画廊</span>
+            </div>
+            <div class="navbar-actions">
+                <button class="btn" onclick="toggleTheme()">
+                    <span id="theme-icon">🌙</span>
+                    <span id="theme-text">深色</span>
+                </button>
+                <button class="btn" onclick="window.location.reload()">
+                    🔄 刷新
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 统计信息 -->
+        <div class="stats">
+            <div class="stats-number">${totalCount}</div>
+            <div class="stats-label">精彩画廊等你探索</div>
+        </div>
+
+        <!-- 画廊网格 -->
+        ${totalCount > 0 ? `
+        <div class="plaza-gallery">
+            ${galleries.map(gallery => generateGalleryCard(gallery)).join('')}
+        </div>
+        ` : `
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3>暂无画廊</h3>
+            <p style="margin-top: 8px;">快去创建第一个画廊吧！</p>
+        </div>
+        `}
+    </div>
+
+    <script>
+        // 深色模式
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            
+            document.getElementById('theme-icon').textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            document.getElementById('theme-text').textContent = newTheme === 'dark' ? '浅色' : '深色';
+            
+            localStorage.setItem('theme', newTheme);
+        }
+        
+        // 加载保存的主题
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('theme-icon').textContent = '☀️';
+                document.getElementById('theme-text').textContent = '浅色';
+            }
+        })();
+        
+        // 点击卡片跳转
+        function openGallery(id) {
+            window.location.href = \`/gallery/\${id}\`;
+        }
+    </script>
+</body>
+</html>`;
+}
+
+// 生成单个画廊卡片
+function generateGalleryCard(gallery) {
+    const { id, title, author, images, created, image_count } = gallery;
+    const count = image_count || images.length;
+    const hasGif = images.some(img => 
+        img.toLowerCase().includes('.gif') || 
+        img.toLowerCase().includes('mmbiz_gif') ||
+        img.toLowerCase().includes('wx_fmt=gif')
+    );
+    
+    // 生成封面拼图
+    const coverImages = images.slice(0, 4);
+    const coverLayout = getCoverLayout(coverImages.length);
+    const coverHTML = generateCoverHTML(coverImages, coverLayout);
+    
+    // 格式化时间
+    const timeAgo = formatTimeAgo(created);
+    
+    return `
+    <div class="gallery-card" onclick="openGallery('${escapeHtml(id)}')">
+        <div class="card-cover">
+            ${coverHTML}
+            ${hasGif ? '<div class="gif-badge">🎬 GIF</div>' : ''}
+        </div>
+        <div class="card-info">
+            <div class="card-title">${escapeHtml(title || '图集')}</div>
+            <div class="card-meta">
+                <div class="card-meta-item">👤 ${escapeHtml(author || '未知')}</div>
+                <div class="card-meta-item">📸 ${count} 张</div>
+            </div>
+            <div class="card-time">🕐 ${timeAgo}</div>
+        </div>
+    </div>`;
+}
+
+// 获取封面布局
+function getCoverLayout(count) {
+    if (count === 1) return 'single';
+    if (count === 2) return 'split';
+    if (count === 3) return 'featured';
+    return 'grid';
+}
+
+// 生成封面HTML
+function generateCoverHTML(images, layout) {
+    if (layout === 'single') {
+        return `<img src="${escapeHtml(images[0])}" alt="" class="cover-img" loading="lazy">`;
+    }
+    
+    const gridClass = layout === 'split' ? 'cover-grid-2' : 
+                      layout === 'featured' ? 'cover-grid-3' : 
+                      'cover-grid-4';
+    
+    return `
+    <div class="cover-grid ${gridClass}">
+        ${images.map(img => 
+            `<img src="${escapeHtml(img)}" alt="" class="cover-img" loading="lazy">`
+        ).join('')}
+    </div>`;
+}
+
+// 格式化时间
+function formatTimeAgo(timestamp) {
+    const now = Date.now();
+    const diff = now - timestamp;
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 30) return `${days}天前`;
+    return new Date(timestamp).toLocaleDateString('zh-CN');
+}
+
+// 广场错误页面
+function generatePlazaErrorHTML(errorMsg) {
+    return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加载失败 - 画廊广场</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        .error-box {
+            text-align: center;
+            padding: 40px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .error-box h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-box">
+        <h1>😔</h1>
+        <h3>加载失败</h3>
+        <p style="color: #666; margin-top: 12px;">${escapeHtml(errorMsg)}</p>
+        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; border-radius: 8px; border: none; background: #667eea; color: white; cursor: pointer;">
+            重试
+        </button>
+    </div>
+</body>
+</html>`;
 }
 
