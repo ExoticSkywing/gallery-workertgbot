@@ -25,12 +25,7 @@ export default {
                 return await handleViewGallery(path, env);
             }
 
-            // 3. Telegraph 图片代理（解决国内访问）
-            if (path === '/img') {
-                return await handleImageProxy(url, env);
-            }
-
-            // 4. 配额查询 API
+            // 3. 配额查询 API
             if (path === '/api/quota' && request.method === 'GET') {
                 return await handleQuotaCheck(request, env);
             }
@@ -78,7 +73,7 @@ async function handleCreateGallery(request, env) {
             id,
             title: data.title || '图集',
             author: data.author || '未知',
-            images: data.images, // Telegraph 图床 URL 列表
+            images: data.images, // Catbox 图床 URL 列表
             created: Date.now(),
             image_count: data.images.length
         };
@@ -160,42 +155,6 @@ async function handleViewGallery(path, env) {
             'Cache-Control': 'public, max-age=3600'
         }
     });
-}
-
-// ========== Telegraph 图片代理 ==========
-async function handleImageProxy(url, env) {
-    const imgUrl = url.searchParams.get('url');
-
-    if (!imgUrl) {
-        return new Response('Missing url parameter', { status: 400 });
-    }
-
-    try {
-        // 请求 Telegraph 图片
-        const response = await fetch(imgUrl, {
-            cf: {
-                cacheEverything: true,
-                cacheTtl: 86400 // 24小时缓存
-            }
-        });
-
-        if (!response.ok) {
-            return new Response('Image not found', { status: 404 });
-        }
-
-        // 返回图片
-        return new Response(response.body, {
-            headers: {
-                'Content-Type': response.headers.get('Content-Type') || 'image/jpeg',
-                'Cache-Control': 'public, max-age=86400',
-                'Access-Control-Allow-Origin': '*'
-            }
-        });
-
-    } catch (error) {
-        console.error('Image proxy error:', error);
-        return new Response('Proxy error', { status: 500 });
-    }
 }
 
 // ========== 配额查询 ==========

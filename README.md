@@ -2,6 +2,8 @@
 
 为 mirrorbot 提供图集画廊服务，解决 Telegraph 国内访问问题。
 
+**图片托管：** Catbox.moe（免费、永久、无限制、国内可访问）
+
 ## 功能特性
 
 - ✅ 国内外均可访问的图集画廊
@@ -57,8 +59,8 @@ Content-Type: application/json
   "title": "图集标题",
   "author": "作者名",
   "images": [
-    "https://telegra.ph/file/abc123.jpg",
-    "https://telegra.ph/file/def456.jpg"
+    "https://files.catbox.moe/abc123.jpg",
+    "https://files.catbox.moe/def456.jpg"
   ]
 }
 ```
@@ -90,15 +92,7 @@ GET /gallery/{id}
 
 返回精美的 HTML 画廊页面
 
-### 3. 图片代理
-
-```http
-GET /img?url={telegraph_image_url}
-```
-
-代理 Telegraph 图片，解决国内访问问题
-
-### 4. 配额查询
+### 3. 配额查询
 
 ```http
 GET /api/quota
@@ -161,10 +155,11 @@ wrangler login
 - 检查是否达到每日写入限制（1,000次）
 
 ### 图片无法加载
-- 确认 Telegraph 图床 URL 是否正确
-- 检查图片是否仍然存在
+- 确认 Catbox 图床 URL 是否正确
+- Catbox 图片永久有效，不会过期
 
 ## 许可证
 
 MIT License
+
 

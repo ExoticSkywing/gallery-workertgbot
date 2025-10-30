@@ -332,3 +332,31 @@ async def check_worker_quota():
 
 **部署成功后，您的用户将获得极致的图集浏览体验！** 🎉
 
+
+用户发送图集链接
+    ↓
+Bot: yt-dlp 解析图片列表
+    ↓
+Bot: 下载所有图片到服务器
+    ↓
+Bot: 上传到 Catbox.moe（永久免费）
+    ↓
+Bot: 获得 Catbox URL 列表
+    ["https://files.catbox.moe/abc123.jpg", ...]
+    ↓
+Bot: 调用 Worker API
+    POST /api/create-gallery
+    { images: [...] }
+    ↓
+Worker: 存储到 KV（30天）
+    ↓
+Worker: 返回画廊 URL
+    https://your-worker.dev/gallery/xyz
+    ↓
+用户点击 → 查看画廊
+    GET /gallery/xyz
+    ↓
+Worker: 生成 HTML 页面
+    <img src="https://files.catbox.moe/abc123.jpg">
+    ↓
+用户浏览器: 直接从 Catbox CDN 加载图片 ✅
