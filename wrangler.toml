@@ -1,5 +1,5 @@
 name = "image-gallery-worker"
-main = "worker.js"
+main = "_worker.js"
 compatibility_date = "2024-01-01"
 
 # KV 命名空间绑定
