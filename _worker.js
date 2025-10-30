@@ -408,6 +408,19 @@ function generateGalleryHTML(data) {
             box-shadow: var(--shadow-hover);
         }
         
+        /* 画廊广场按钮特殊样式 */
+        .btn-explore {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 500;
+        }
+        
+        .btn-explore:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a4091 100%);
+            transform: translateY(-2px) scale(1.05);
+        }
+        
         /* 头部 */
         .header {
             background: var(--bg-secondary);
@@ -706,7 +719,7 @@ function generateGalleryHTML(data) {
         }
         
         @media (max-width: 768px) {
-            .gallery { 
+            .gallery {
                 column-count: 2;
                 column-gap: 12px;
             }
@@ -737,6 +750,13 @@ function generateGalleryHTML(data) {
             .top-bar {
                 flex-direction: column;
             }
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .btn-explore {
+                order: -1; /* 画廊广场按钮优先显示在最上方 */
+            }
             .container {
                 padding: 12px;
             }
@@ -747,6 +767,9 @@ function generateGalleryHTML(data) {
     <div class="container">
         <!-- 顶部控制栏 -->
         <div class="top-bar">
+            <button class="btn btn-explore" onclick="window.location.href='/plaza'" title="探索更多精彩画廊">
+                🎨 画廊广场
+            </button>
             <button class="btn" onclick="toggleTheme()">
                 <span id="theme-icon">🌙</span> 
                 <span id="theme-text">深色</span>
@@ -798,7 +821,7 @@ function generateGalleryHTML(data) {
         <div class="lightbox-nav lightbox-prev" onclick="navigateLightbox(-1)">‹</div>
         <div class="lightbox-nav lightbox-next" onclick="navigateLightbox(1)">›</div>
         <div class="lightbox-content">
-            <img id="lightbox-img" src="" alt="">
+        <img id="lightbox-img" src="" alt="">
         </div>
         <div class="lightbox-counter" id="lightbox-counter">1 / ${images.length}</div>
         <div class="swipe-hint">👆 左右滑动切换图片</div>
@@ -866,7 +889,7 @@ function generateGalleryHTML(data) {
             document.getElementById('lightbox').classList.add('active');
             document.body.style.overflow = 'hidden';
         }
-        
+
         function closeLightbox() {
             document.getElementById('lightbox').classList.remove('active');
             document.body.style.overflow = '';
@@ -1411,6 +1434,33 @@ function generatePlazaHTML(galleries) {
             opacity: 0.5;
         }
         
+        /* 广场页脚 */
+        .plaza-footer {
+            text-align: center;
+            padding: 60px 20px 40px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
+            margin-top: 80px;
+            background: var(--bg-secondary);
+        }
+        
+        .plaza-footer p {
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .plaza-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .plaza-footer a:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+        
         /* 响应式 */
         @media (max-width: 1200px) {
             .plaza-gallery { column-count: 3; }
@@ -1495,6 +1545,14 @@ function generatePlazaHTML(galleries) {
             <p style="margin-top: 8px;">快去创建第一个画廊吧！</p>
         </div>
         `}
+    </div>
+
+    <!-- 页脚 -->
+    <div class="plaza-footer">
+        <p>🌍 全球可访问 · ⚡ 由 <a href="https://1yo.cc" target="_blank" rel="noopener noreferrer">Nebuluxe</a> 强力驱动</p>
+        <p style="margin-top: 12px; font-size: 12px; opacity: 0.7;">
+            探索精彩画廊 · 深色模式 · 实时更新
+        </p>
     </div>
 
     <script>
