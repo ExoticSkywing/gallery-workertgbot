@@ -1180,6 +1180,22 @@ function generatePlazaHTML(galleries) {
             height: 150px;
         }
         
+        /* 新增：大横图单图（Hero布局）*/
+        .cover-hero .cover-img {
+            height: 320px;
+            object-fit: cover;
+        }
+        
+        /* 新增：3竖图横排（Triple布局）*/
+        .cover-grid-triple {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+        
+        .cover-grid-triple .cover-img {
+            height: 260px;
+            object-fit: cover;
+        }
+        
         .gallery-card:hover .cover-img {
             transform: scale(1.05);
         }
@@ -1276,6 +1292,14 @@ function generatePlazaHTML(galleries) {
             }
             .cover-grid-3 .cover-img:not(:first-child) {
                 height: 100px;
+            }
+            /* Hero布局移动端优化 */
+            .cover-hero .cover-img {
+                height: 240px;
+            }
+            /* Triple布局移动端优化 */
+            .cover-grid-triple .cover-img {
+                height: 200px;
             }
         }
         
@@ -1395,7 +1419,7 @@ function generateGalleryCard(gallery) {
     </div>`;
 }
 
-// 智能布局策略（增加视觉多样性）
+// 智能布局策略（渐进优化：5种布局）
 function getSmartLayout(totalCount, galleryId) {
     // 特殊处理：1-2张图的画廊
     if (totalCount === 1) {
@@ -1405,20 +1429,26 @@ function getSmartLayout(totalCount, galleryId) {
     }
     
     // 3+张图：使用ID哈希来决定布局，增加视觉多样性
-    // 这样即使都是大画廊，也会有不同的封面风格
+    // 渐进优化：从3种增加到5种布局
     const hash = simpleHash(galleryId);
-    const layoutIndex = hash % 3; // 0, 1, 2
+    const layoutIndex = hash % 5; // 0, 1, 2, 3, 4
     
     switch(layoutIndex) {
         case 0:
-            // 33% 概率：2图左右对半（简约大气）
+            // 20% 概率：2图左右对半（简约大气）
             return { layout: 'split', imageCount: 2 };
         case 1:
-            // 33% 概率：3图1大2小（艺术感）
+            // 20% 概率：3图1大2小（艺术感）
             return { layout: 'featured', imageCount: 3 };
         case 2:
-            // 33% 概率：4图网格（饱满丰富）
+            // 20% 概率：4图网格（饱满丰富）
             return { layout: 'grid', imageCount: 4 };
+        case 3:
+            // 20% 概率：大横图单图（视觉冲击）
+            return { layout: 'hero', imageCount: 1 };
+        case 4:
+            // 20% 概率：3竖图横排（精致优雅）
+            return { layout: 'triple', imageCount: 3 };
         default:
             return { layout: 'grid', imageCount: 4 };
     }
@@ -1445,12 +1475,20 @@ function getCoverLayout(count) {
 
 // 生成封面HTML
 function generateCoverHTML(images, layout) {
+    // Hero布局：大横图单图
+    if (layout === 'hero') {
+        return `<div class="cover-hero"><img src="${escapeHtml(images[0])}" alt="" class="cover-img" loading="lazy"></div>`;
+    }
+    
+    // Single布局：单图（原有）
     if (layout === 'single') {
         return `<img src="${escapeHtml(images[0])}" alt="" class="cover-img" loading="lazy">`;
     }
     
+    // 其他网格布局
     const gridClass = layout === 'split' ? 'cover-grid-2' : 
                       layout === 'featured' ? 'cover-grid-3' : 
+                      layout === 'triple' ? 'cover-grid-triple' :
                       'cover-grid-4';
     
     return `
