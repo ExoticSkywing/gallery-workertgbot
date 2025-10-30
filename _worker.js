@@ -635,6 +635,17 @@ function generateGalleryHTML(data) {
             font-size: 14px;
         }
         
+        .swipe-hint {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            display: none;
+            animation: fadeInOut 3s ease-in-out;
+        }
+        
         /* 页脚 */
         .footer {
             text-align: center;
@@ -681,6 +692,11 @@ function generateGalleryHTML(data) {
             to { opacity: 1; }
         }
         
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            10%, 90% { opacity: 1; }
+        }
+        
         /* 响应式 */
         @media (max-width: 1200px) {
             .gallery { column-count: 3; }
@@ -688,7 +704,7 @@ function generateGalleryHTML(data) {
         
         @media (max-width: 768px) {
             .gallery { 
-                column-count: 2; 
+                column-count: 2;
                 column-gap: 12px;
             }
             .header {
@@ -701,12 +717,17 @@ function generateGalleryHTML(data) {
                 gap: 12px;
             }
             .lightbox-nav {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
+                width: 44px;
+                height: 44px;
+                font-size: 22px;
+                background: rgba(255,255,255,0.3);
+                /* 增强触摸目标大小 */
             }
-            .lightbox-prev { left: 15px; }
-            .lightbox-next { right: 15px; }
+            .lightbox-prev { left: 10px; }
+            .lightbox-next { right: 10px; }
+            .swipe-hint {
+                display: block; /* 移动端显示滑动提示 */
+            }
         }
         
         @media (max-width: 480px) {
@@ -777,6 +798,7 @@ function generateGalleryHTML(data) {
             <img id="lightbox-img" src="" alt="">
         </div>
         <div class="lightbox-counter" id="lightbox-counter">1 / ${images.length}</div>
+        <div class="swipe-hint">👆 左右滑动切换图片</div>
     </div>
 
     <script>
@@ -889,6 +911,42 @@ function generateGalleryHTML(data) {
                     break;
             }
         });
+        
+        // 触摸滑动手势支持（移动端）
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let touchStartY = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 50; // 最小滑动距离（像素）
+        
+        const lightboxImg = document.getElementById('lightbox-img');
+        
+        lightboxImg.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        lightboxImg.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+        
+        function handleSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // 判断是否为水平滑动（水平位移 > 垂直位移）
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+                if (deltaX > 0) {
+                    // 向右滑动 = 上一张
+                    navigateLightbox(-1);
+                } else {
+                    // 向左滑动 = 下一张
+                    navigateLightbox(1);
+                }
+            }
+        }
         
         // 批量下载功能（隐藏，保留接口）
         async function downloadAllImages() {
