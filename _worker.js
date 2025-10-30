@@ -565,6 +565,9 @@ function generateGalleryHTML(data) {
             object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            touch-action: pan-y pinch-zoom; /* 允许垂直滚动和缩放 */
+            will-change: transform, opacity; /* 性能优化 */
         }
         
         .lightbox-controls {
@@ -875,9 +878,21 @@ function generateGalleryHTML(data) {
         }
         
         function updateLightbox() {
-            document.getElementById('lightbox-img').src = images[currentIndex];
-            document.getElementById('lightbox-counter').textContent = 
-                \`\${currentIndex + 1} / \${images.length}\`;
+            const img = document.getElementById('lightbox-img');
+            
+            // 淡出效果
+            img.style.opacity = '0.3';
+            
+            // 延迟加载新图片
+            setTimeout(() => {
+                img.src = images[currentIndex];
+                img.style.transform = 'translateX(0)';
+                img.style.transition = 'opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                img.style.opacity = '1';
+                
+                document.getElementById('lightbox-counter').textContent = 
+                    \`\${currentIndex + 1} / \${images.length}\`;
+            }, 100);
         }
         
         function downloadCurrent() {
@@ -912,41 +927,81 @@ function generateGalleryHTML(data) {
             }
         });
         
-        // 触摸滑动手势支持（移动端）
+        // 触摸滑动手势支持（移动端 - 优化版）
         let touchStartX = 0;
-        let touchEndX = 0;
         let touchStartY = 0;
-        let touchEndY = 0;
+        let currentTranslateX = 0;
+        let isDragging = false;
         const minSwipeDistance = 50; // 最小滑动距离（像素）
+        const swipeThreshold = 0.3; // 滑动阈值（屏幕宽度的30%）
         
+        const lightboxContent = document.querySelector('.lightbox-content');
         const lightboxImg = document.getElementById('lightbox-img');
         
+        // 禁用图片的默认拖拽行为
+        lightboxImg.style.userSelect = 'none';
+        lightboxImg.style.webkitUserSelect = 'none';
+        
         lightboxImg.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isDragging = true;
+            lightboxImg.style.transition = 'none'; // 拖动时禁用过渡
+        }, { passive: true });
+        
+        lightboxImg.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            
+            const touchCurrentX = e.touches[0].clientX;
+            const touchCurrentY = e.touches[0].clientY;
+            const deltaX = touchCurrentX - touchStartX;
+            const deltaY = touchCurrentY - touchStartY;
+            
+            // 只有水平滑动才响应（防止与垂直滚动冲突）
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                currentTranslateX = deltaX;
+                // 添加阻尼效果（越拖越难）
+                const damping = 0.6;
+                lightboxImg.style.transform = \`translateX(\${deltaX * damping}px)\`;
+                lightboxImg.style.opacity = 1 - Math.abs(deltaX) / (window.innerWidth * 2);
+            }
         }, { passive: true });
         
         lightboxImg.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleSwipe();
-        }, { passive: true });
-        
-        function handleSwipe() {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
+            const swipeDistance = window.innerWidth * swipeThreshold;
             
-            // 判断是否为水平滑动（水平位移 > 垂直位移）
+            // 恢复过渡动画
+            lightboxImg.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+            
+            // 判断是否为水平滑动
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
-                if (deltaX > 0) {
-                    // 向右滑动 = 上一张
-                    navigateLightbox(-1);
+                if (Math.abs(deltaX) > swipeDistance) {
+                    // 达到阈值，切换图片
+                    if (deltaX > 0) {
+                        navigateLightbox(-1); // 向右滑 = 上一张
+                    } else {
+                        navigateLightbox(1);  // 向左滑 = 下一张
+                    }
                 } else {
-                    // 向左滑动 = 下一张
-                    navigateLightbox(1);
+                    // 未达到阈值，回弹
+                    lightboxImg.style.transform = 'translateX(0)';
+                    lightboxImg.style.opacity = '1';
                 }
+            } else {
+                // 不是水平滑动，回弹
+                lightboxImg.style.transform = 'translateX(0)';
+                lightboxImg.style.opacity = '1';
             }
-        }
+            
+            currentTranslateX = 0;
+        }, { passive: true });
         
         // 批量下载功能（隐藏，保留接口）
         async function downloadAllImages() {
