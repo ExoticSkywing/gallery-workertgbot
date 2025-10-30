@@ -656,9 +656,11 @@ function generateGalleryHTML(data) {
         }
         
         @media (max-width: 480px) {
-            .gallery { column-count: 1; }
             .top-bar {
                 flex-direction: column;
+            }
+            .container {
+                padding: 12px;
             }
         }
     </style>
