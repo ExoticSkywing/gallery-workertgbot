@@ -1155,12 +1155,24 @@ function generatePlazaHTML(galleries) {
             transition: transform 0.3s;
         }
         
+        /* 单图：大图展示 */
+        .card-cover img.cover-img:only-child {
+            height: 300px;
+            object-fit: cover;
+        }
+        
+        /* 3图布局：1大2小 */
         .cover-grid-3 .cover-img:first-child {
             height: 240px;
         }
         
         .cover-grid-3 .cover-img:not(:first-child) {
             height: 120px;
+        }
+        
+        /* 4图网格：标准高度 */
+        .cover-grid-4 .cover-img {
+            height: 150px;
         }
         
         .gallery-card:hover .cover-img {
@@ -1353,10 +1365,10 @@ function generateGalleryCard(gallery) {
         img.toLowerCase().includes('wx_fmt=gif')
     );
     
-    // 生成封面拼图
-    const coverImages = images.slice(0, 4);
-    const coverLayout = getCoverLayout(coverImages.length);
-    const coverHTML = generateCoverHTML(coverImages, coverLayout);
+    // 智能选择封面布局（根据总图片数）
+    const layoutType = getSmartLayout(count);
+    const coverImages = images.slice(0, layoutType.imageCount);
+    const coverHTML = generateCoverHTML(coverImages, layoutType.layout);
     
     // 格式化时间
     const timeAgo = formatTimeAgo(created);
@@ -1378,7 +1390,25 @@ function generateGalleryCard(gallery) {
     </div>`;
 }
 
-// 获取封面布局
+// 智能布局策略（根据画廊总图片数）
+function getSmartLayout(totalCount) {
+    if (totalCount === 1) {
+        return { layout: 'single', imageCount: 1 };
+    } else if (totalCount === 2) {
+        return { layout: 'split', imageCount: 2 };
+    } else if (totalCount >= 3 && totalCount <= 5) {
+        // 3-5张：3图布局（1大2小）更精致
+        return { layout: 'featured', imageCount: 3 };
+    } else if (totalCount >= 6 && totalCount <= 9) {
+        // 6-9张：4图网格，看起来饱满
+        return { layout: 'grid', imageCount: 4 };
+    } else {
+        // 10+张：大画廊，4图网格
+        return { layout: 'grid', imageCount: 4 };
+    }
+}
+
+// 获取封面布局（废弃，保留兼容）
 function getCoverLayout(count) {
     if (count === 1) return 'single';
     if (count === 2) return 'split';
