@@ -1134,6 +1134,11 @@ function generatePlazaHTML(galleries) {
             grid-template-columns: 1fr 1fr;
         }
         
+        /* 2图布局：左右对半 */
+        .cover-grid-2 .cover-img {
+            height: 200px;
+        }
+        
         .cover-grid-3 {
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 2fr 1fr;
@@ -1365,8 +1370,8 @@ function generateGalleryCard(gallery) {
         img.toLowerCase().includes('wx_fmt=gif')
     );
     
-    // 智能选择封面布局（根据总图片数）
-    const layoutType = getSmartLayout(count);
+    // 智能选择封面布局（根据总图片数 + ID哈希）
+    const layoutType = getSmartLayout(count, id);
     const coverImages = images.slice(0, layoutType.imageCount);
     const coverHTML = generateCoverHTML(coverImages, layoutType.layout);
     
@@ -1390,22 +1395,44 @@ function generateGalleryCard(gallery) {
     </div>`;
 }
 
-// 智能布局策略（根据画廊总图片数）
-function getSmartLayout(totalCount) {
+// 智能布局策略（增加视觉多样性）
+function getSmartLayout(totalCount, galleryId) {
+    // 特殊处理：1-2张图的画廊
     if (totalCount === 1) {
         return { layout: 'single', imageCount: 1 };
     } else if (totalCount === 2) {
         return { layout: 'split', imageCount: 2 };
-    } else if (totalCount >= 3 && totalCount <= 5) {
-        // 3-5张：3图布局（1大2小）更精致
-        return { layout: 'featured', imageCount: 3 };
-    } else if (totalCount >= 6 && totalCount <= 9) {
-        // 6-9张：4图网格，看起来饱满
-        return { layout: 'grid', imageCount: 4 };
-    } else {
-        // 10+张：大画廊，4图网格
-        return { layout: 'grid', imageCount: 4 };
     }
+    
+    // 3+张图：使用ID哈希来决定布局，增加视觉多样性
+    // 这样即使都是大画廊，也会有不同的封面风格
+    const hash = simpleHash(galleryId);
+    const layoutIndex = hash % 3; // 0, 1, 2
+    
+    switch(layoutIndex) {
+        case 0:
+            // 33% 概率：2图左右对半（简约大气）
+            return { layout: 'split', imageCount: 2 };
+        case 1:
+            // 33% 概率：3图1大2小（艺术感）
+            return { layout: 'featured', imageCount: 3 };
+        case 2:
+            // 33% 概率：4图网格（饱满丰富）
+            return { layout: 'grid', imageCount: 4 };
+        default:
+            return { layout: 'grid', imageCount: 4 };
+    }
+}
+
+// 简单哈希函数（将字符串转为数字）
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
 }
 
 // 获取封面布局（废弃，保留兼容）
