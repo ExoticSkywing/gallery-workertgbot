@@ -20,12 +20,18 @@ export default {
                 return await handleCreateGallery(request, env);
             }
 
-            // 2. 查看画廊页面
+            // 2. 检查画廊是否存在 API
+            if (path.startsWith('/api/check/') && request.method === 'GET') {
+                const galleryId = path.split('/').pop();
+                return await handleCheckGallery(galleryId, env, url.origin);
+            }
+
+            // 3. 查看画廊页面
             if (path.startsWith('/gallery/')) {
                 return await handleViewGallery(path, env);
             }
 
-            // 3. 配额查询 API
+            // 4. 配额查询 API
             if (path === '/api/quota' && request.method === 'GET') {
                 return await handleQuotaCheck(request, env);
             }
@@ -51,6 +57,34 @@ export default {
     }
 };
 
+// ========== 检查画廊是否存在 ==========
+async function handleCheckGallery(galleryId, env, origin) {
+    try {
+        const key = `gallery:${galleryId}`;
+        const data = await env.KV.get(key);
+        
+        if (data) {
+            const galleryData = JSON.parse(data);
+            return Response.json({
+                exists: true,
+                gallery_url: `${origin}/gallery/${galleryId}`,
+                image_count: galleryData.image_count || galleryData.images.length,
+                created: galleryData.created
+            });
+        }
+        
+        return Response.json({
+            exists: false
+        });
+    } catch (error) {
+        console.error('Check gallery error:', error);
+        return Response.json({
+            exists: false,
+            error: error.message
+        }, { status: 500 });
+    }
+}
+
 // ========== 创建画廊 ==========
 async function handleCreateGallery(request, env) {
     try {
@@ -65,8 +99,22 @@ async function handleCreateGallery(request, env) {
             }, { status: 400 });
         }
 
-        // 生成唯一 ID
-        const id = generateGalleryId();
+        // 获取或生成画廊ID（支持客户端指定ID）
+        const id = data.gallery_id || generateGalleryId();
+        
+        // 检查画廊是否已存在
+        const existingData = await env.KV.get(`gallery:${id}`);
+        if (existingData) {
+            // 画廊已存在，直接返回
+            const url = new URL(request.url);
+            return Response.json({
+                success: true,
+                gallery_id: id,
+                gallery_url: `${url.origin}/gallery/${id}`,
+                message: 'ALREADY_EXISTS',
+                note: '画廊已存在，无需重复创建'
+            });
+        }
 
         // 构建画廊数据
         const galleryData = {
