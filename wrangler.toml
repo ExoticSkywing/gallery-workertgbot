@@ -1,0 +1,13 @@
+name = "image-gallery-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# KV 命名空间绑定
+[[kv_namespaces]]
+binding = "KV"
+id = "your-kv-namespace-id"  # 部署时需要替换
+
+# 环境变量（可选）
+[vars]
+# ADMIN_TOKEN = "your-secret-token"  # 可选：用于配额查询认证
+
