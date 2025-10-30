@@ -395,7 +395,7 @@ function generateGalleryHTML(data) {
         </div>
 
         <div class="footer">
-            <p>🌍 国内外均可访问 · ⚡ 由 Cloudflare Workers 强力驱动</p>
+            <p>🌍 全球可访问 · ⚡ 由 <a href="https://1yo.cc" target="_blank" style="color: #666; text-decoration: none;">Nebuluxe</a> 强力驱动</p>
         </div>
     </div>
 
