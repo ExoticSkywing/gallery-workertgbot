@@ -31,12 +31,17 @@ export default {
                 return await handleViewGallery(path, env);
             }
 
-            // 4. 配额查询 API
+            // 4. 画廊广场（浏览所有画廊）
+            if (path === '/explore' || path === '/plaza') {
+                return await handleGalleryPlaza(env, url.searchParams);
+            }
+
+            // 5. 配额查询 API
             if (path === '/api/quota' && request.method === 'GET') {
                 return await handleQuotaCheck(request, env);
             }
 
-            // 5. 健康检查
+            // 6. 健康检查
             if (path === '/health') {
                 return Response.json({
                     status: 'ok',
