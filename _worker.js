@@ -128,8 +128,14 @@ async function handleCreateGallery(request, env) {
             author: data.author || '未知',
             images: data.images, // Catbox 图床 URL 列表
             created: Date.now(),
-            image_count: data.images.length
+            image_count: data.images.length,
+            theme_colors: data.theme_colors || null // 主题色（可选）
         };
+        
+        // 日志记录主题色
+        if (data.theme_colors) {
+            console.log(`🎨 Gallery ${id} theme colors:`, data.theme_colors);
+        }
 
         // 存储到 KV（30天自动过期）
         try {
@@ -1117,6 +1123,33 @@ function generatePlazaHTML(galleries) {
             box-shadow: var(--shadow-hover);
         }
         
+        /* 🎨 主题色样式 */
+        .gallery-card.has-theme {
+            border: 2px solid transparent;
+            background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+                        linear-gradient(135deg, var(--theme-primary, #6366f1), var(--theme-accent, #8b5cf6)) border-box;
+            position: relative;
+        }
+        
+        .gallery-card.has-theme:hover {
+            box-shadow: 0 20px 60px -15px var(--theme-primary), 
+                        0 0 0 1px var(--theme-primary);
+            transform: translateY(-10px);
+        }
+        
+        .gallery-card.has-theme .gif-badge {
+            background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
+            border: none;
+        }
+        
+        .gallery-card.has-theme .card-time {
+            background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+        
         /* 封面拼图 */
         .card-cover {
             position: relative;
@@ -1386,7 +1419,7 @@ function generatePlazaHTML(galleries) {
 
 // 生成单个画廊卡片
 function generateGalleryCard(gallery) {
-    const { id, title, author, images, created, image_count } = gallery;
+    const { id, title, author, images, created, image_count, theme_colors } = gallery;
     const count = image_count || images.length;
     const hasGif = images.some(img => 
         img.toLowerCase().includes('.gif') || 
@@ -1402,8 +1435,13 @@ function generateGalleryCard(gallery) {
     // 格式化时间
     const timeAgo = formatTimeAgo(created);
     
+    // 🎨 应用主题色（如果有）
+    const cardStyle = theme_colors ? 
+        `style="--theme-primary: ${theme_colors.primary}; --theme-accent: ${theme_colors.accent};"` : '';
+    const hasTheme = theme_colors ? 'has-theme' : '';
+    
     return `
-    <div class="gallery-card" onclick="openGallery('${escapeHtml(id)}')">
+    <div class="gallery-card ${hasTheme}" ${cardStyle} onclick="openGallery('${escapeHtml(id)}')">
         <div class="card-cover">
             ${coverHTML}
             ${hasGif ? '<div class="gif-badge">🎬 GIF</div>' : ''}
